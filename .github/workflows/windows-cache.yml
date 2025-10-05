@@ -1,0 +1,93 @@
+# SPDX-FileCopyrightText: 2022 Nextcloud GmbH and Nextcloud contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+name: Windows Cache
+on:
+  push:
+    paths:
+      - '.github/workflows/windows-cache.yml'
+  workflow_dispatch:
+jobs:
+  cache:
+    name: Windows Cache
+    runs-on: windows-2022
+    permissions: 
+      contents: read
+    env:
+      BASE_WORKSPACE: ${{ github.workspace }}/nextcloud-desktop
+      CRAFT_TARGET: windows-msvc2022_64-cl
+      CHOCO_LOCATION: ${{ github.workspace }}/nextcloud-desktop/choco
+      COBERTURA_COVERAGE_FILE:  ${{ github.workspace }}/nextcloud-desktop/cobertura_coverage/coverage.xml
+      CRAFT_MASTER_LOCATION:  ${{ github.workspace }}/nextcloud-desktop/CraftMaster
+      CRAFT_MASTER_CONFIG:  ${{ github.workspace }}/nextcloud-desktop/craftmaster.ini
+      ARCHIVE_VERABLE: -zcvf
+      ARCHIVE_PERFIX: .zip
+    steps:
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Checkout repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: zonghewang/nextcloud-desktop
+          token: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
+          path: nextcloud-desktop
+          
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+      - name: download choco package
+        shell: pwsh
+        run: |
+          mkdir ${{ env.CHOCO_LOCATION }}
+          Invoke-WebRequest -Uri "https://community.chocolatey.org/api/v2/package/7zip.install" -OutFile "${{ env.CHOCO_LOCATION }}/"
+          Invoke-WebRequest -Uri "https://community.chocolatey.org/api/v2/package/InkScape" -OutFile "${{ env.CHOCO_LOCATION }}/"
+          # Invoke-WebRequest -Uri "https://community.chocolatey.org/api/v2/package/png2ico" -OutFile "${{ env.CHOCO_LOCATION }}/"
+          Copy-Item -Path "${{ github.workspace }}/png2imagemagickico.1.0.0.nupkg" -Destination "${{ env.CHOCO_LOCATION }}/"
+          
+
+      # - name: Install inkscape
+      #   shell: pwsh
+      #   run: |
+      #     choco config set --name="chocoOfflineControl" --value="${{ env.CHOCO_LOCATION }}/"
+      #     choco install inkscape --cache-location="${{ env.CHOCO_LOCATION }}/"       
+
+      - name: Install Craft Master with Nextcloud Client Deps
+        shell: pwsh
+        run: |
+          & cmd /C "git clone -q --depth=1 https://github.com/KDE/craftmaster.git ${{ env.CRAFT_MASTER_LOCATION }} 2>&1"
+          
+          function craft() {
+              python "${{ env.CRAFT_MASTER_LOCATION }}/CraftMaster.py" --config "${{ env.CRAFT_MASTER_CONFIG }}" --target ${{ env.CRAFT_TARGET }} -c $args
+              if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+          }
+          
+          craft --add-blueprint-repository "https://github.com/nextcloud/craft-blueprints-kde.git|next|"
+          craft --add-blueprint-repository "https://oauth2:${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}@github.com/zonghewang/nextcloud-desktop-client-blueprints.git|master|"
+          craft craft
+          craft --install-deps nextcloud-client
+      # - name: download inkscape package
+      #   shell: pwsh
+      #   run: |
+      #     choco download inkscape --source="${{ env.CHOCO_LOCATION }}"
+      #     Invoke-WebRequest -Uri "https://community.chocolatey.org/api/v2/package/InkScape" -OutFile "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/InkScape.nupkg" 
+
+
+
+      - name: Save cached Craft directories
+        id: build-windows-cache-craft-save
+        uses: actions/cache/save@v4.3.0
+        with:
+          path: |
+            ${{ env.CHOCO_LOCATION }}
+            ${{ env.CRAFT_MASTER_LOCATION }}
+            ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}
+          key: ${{ runner.os }}-cache-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+
+  call-build-workflow:
+    needs: cache
+    uses: ./.github/workflows/windows-build.yml
+    secrets:
+      NEXTCLOUD_BRANCH_ACCESS_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
+
+          

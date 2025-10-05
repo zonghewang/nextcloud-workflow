@@ -1,0 +1,149 @@
+# SPDX-FileCopyrightText: 2022 Nextcloud GmbH and Nextcloud contributors
+# SPDX-License-Identifier: GPL-2.0-or-later
+name: Windows Package
+on:
+  push:
+    paths:
+      - '.github/workflows/windows-package.yml'
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      NEXTCLOUD_BRANCH_ACCESS_TOKEN:
+        required: true
+
+jobs:
+  packkage:
+    name: Windows Package
+    runs-on: windows-2022
+    permissions: 
+      contents: read
+    env:
+      BASE_WORKSPACE: ${{ github.workspace }}/nextcloud-desktop
+      CRAFT_TARGET: windows-msvc2022_64-cl
+      CHOCO_LOCATION: ${{ github.workspace }}/nextcloud-desktop/choco
+      COBERTURA_COVERAGE_FILE:  ${{ github.workspace }}/nextcloud-desktop/cobertura_coverage/coverage.xml
+      CRAFT_MASTER_LOCATION:  ${{ github.workspace }}/nextcloud-desktop/CraftMaster
+      CRAFT_MASTER_CONFIG:  ${{ github.workspace }}/nextcloud-desktop/craftmaster.ini
+      ARCHIVE_VERABLE: -zcvf
+      ARCHIVE_PERFIX: .zip
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Checkout repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: zonghewang/nextcloud-desktop
+          token: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
+          path: nextcloud-desktop
+
+      - name: Discover cached Craft directories
+        id: build-windows-cache-craft-restore
+        uses: actions/cache/restore@v4.3.0 # v4.3.0
+        with:
+          path: |
+            ${{ env.CHOCO_LOCATION }}
+            ${{ env.CRAFT_MASTER_LOCATION }}
+            ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}
+          key: ${{ runner.os }}-build-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install Craft Master with Nextcloud Client Deps
+        if: steps.build-windows-cache-craft-restore.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          & cmd /C "git clone -q --depth=1 https://github.com/KDE/craftmaster.git ${{ env.CRAFT_MASTER_LOCATION }} 2>&1"
+          
+          function craft() {
+              python "${{ env.CRAFT_MASTER_LOCATION }}/CraftMaster.py" --config "${{ env.CRAFT_MASTER_CONFIG }}" --target ${{ env.CRAFT_TARGET }} -c $args
+              if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+          }
+
+          craft --add-blueprint-repository "https://github.com/nextcloud/craft-blueprints-kde.git|next|"
+          craft --add-blueprint-repository "https://oauth2:${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}@github.com/zonghewang/nextcloud-desktop-client-blueprints.git|master|"
+          craft craft
+          craft --install-deps nextcloud-client
+
+      - name: Install choco
+        # if: steps.build-windows-cache-craft-restore.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          choco source add -n=chocoOfflineControl -s="file:///${{ env.CHOCO_LOCATION }}/"  --priority=5
+          tree /a /f  "${{ env.CHOCO_LOCATION }}"
+          choco install -f inkscape --cache-location="${{ env.CHOCO_LOCATION }}" 
+          # choco install -f inkscape png2imagemagickico --cache-location="${{ env.CHOCO_LOCATION }}" 
+
+      - name: Compile
+        if: steps.build-windows-cache-craft-restore.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          function craft() {
+              python "${{ env.CRAFT_MASTER_LOCATION }}/CraftMaster.py" --config "${{ env.CRAFT_MASTER_CONFIG }}" --target ${{ env.CRAFT_TARGET }} -c $args
+              if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+          }
+          
+          craft --src-dir ${{ env.BASE_WORKSPACE }} nextcloud-client
+
+      - name: Pacage
+        shell: pwsh
+        run: |
+          function craft() {
+              python "${{ env.CRAFT_MASTER_LOCATION }}/CraftMaster.py" --config "${{ env.CRAFT_MASTER_CONFIG }}" --target ${{ env.CRAFT_TARGET }} -c $args
+              if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
+          }
+          
+          craft --src-dir ${{ env.BASE_WORKSPACE }} --package nextcloud-client
+
+      # - uses: shaowenchen/debugger-action@v2
+      #   name: debugger
+      #   timeout-minutes: 30
+      #   continue-on-error: true
+      #   with:
+      #     frp_server_addr: ${{ secrets.FRP_SERVER_ADDR }}
+      #     frp_server_port: ${{ secrets.FRP_SERVER_PORT }}
+      #     frp_token: ${{ secrets.FRP_TOKEN }}
+      #     ssh_port: ${{ secrets.SSH_PORT }}
+
+      # https://github.com/microsoft/msix-packaging.git
+
+      - name: build msi
+        shell: pwsh
+        run: |
+          & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\Launch-VsDevShell.ps1" -SkipAutomaticLocation
+          # tree /a /f   ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/nextcloud-client/
+          cd ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp
+          7z x nextcloud-client-master-master-windows-cl-msvc2022-x86_64.7z -ooutput
+          Copy-Item -Path "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/i18n" -Destination "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/bin/" -Recurse
+          # Copy-Item -Path "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/build/nextcloud-client/work/build/src/gui/Nextcloud.ico" -Destination "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/bin/" -Recurse
+          Copy-Item -Path "${{ env.BASE_WORKSPACE }}/admin/win/nsi/installer.ico" -Destination "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/bin/Nextcloud.ico" -Recurse
+          cd ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/msi
+          # $Env:WIX="C:\Program Files\WiX Toolset v6.0\bin\"
+          & ./make-msi.bat ../bin
+
+ 
+      # - name: tar msi build script
+      #   shell: pwsh
+      #   run: |
+      #     Compress-Archive -Path "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp" -DestinationPath "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}${{ env.ARCHIVE_PERFIX }}"
+
+      - name: Upload msi
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          compression-level: 9
+          name: msi-file
+          path: |
+            ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/msi/*.msi
+      - name: Upload 7z
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: source-7z
+          compression-level: 9
+          path: |
+            ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/*.7z
+
+
+
+          
