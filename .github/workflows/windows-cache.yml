@@ -7,8 +7,43 @@ on:
       - '.github/workflows/windows-cache.yml'
   workflow_dispatch:
 jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    env:
+      BASE_WORKSPACE: ${{ github.workspace }}/nextcloud-desktop
+      CRAFT_TARGET: windows-msvc2022_64-cl
+      CHOCO_LOCATION: ${{ github.workspace }}/nextcloud-desktop/choco
+      COBERTURA_COVERAGE_FILE:  ${{ github.workspace }}/nextcloud-desktop/cobertura_coverage/coverage.xml
+      CRAFT_MASTER_LOCATION:  ${{ github.workspace }}/nextcloud-desktop/CraftMaster
+      CRAFT_MASTER_CONFIG:  ${{ github.workspace }}/nextcloud-desktop/craftmaster.ini
+      ARCHIVE_VERABLE: -zcvf
+      ARCHIVE_PERFIX: .zip
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
+          
+      - name: Checkout repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: zonghewang/nextcloud-desktop
+          token: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
+          path: nextcloud-desktop
+
+      - name: Cleanup
+        run: |
+          gh cache delete $CACHE_KEY
+          echo "Done"
+        env:
+          GH_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
+          CACHE_KEY: ${{ runner.os }}-cache-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+
   cache:
     name: Windows Cache
+    needs: cleanup
     runs-on: windows-2022
     permissions: 
       contents: read
