@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 name: Linux Appimage Package
 on:
+  push:
+    paths:
+      - '.github/workflows/linux-appimage.yml'
   workflow_dispatch:
   workflow_call:
 
