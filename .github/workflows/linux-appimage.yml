@@ -46,14 +46,14 @@ jobs:
           overwrite: true
           compression-level: 0 # squashfs is already compressed
 
-      - name: Upload R2 use S3
-        uses: shallwefootball/s3-upload-action@master
+      - name: Upload artifact to R2
+        uses: randomairborne/r2-release@main
         with:
           endpoint: ${{ secrets.R2_ENDPOINT_URL }}
-          aws_key_id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          aws_bucket: ${{ secrets.R2_BUCKET_NAME }}
-          source_dir: '${{ env.BASE_WORKSPACE }}/${{ steps.build-appimage.outputs.APPIMAGE_NAME }}'
-          destination_dir: '/nextcloud-disktop/linux/'
+          accesskeyid: ${{ secrets.R2_ACCESS_KEY_ID }}
+          secretaccesskey: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          bucket: ${{ secrets.R2_BUCKET_NAME }}
+          file: '${{ env.BASE_WORKSPACE }}/${{ steps.build-appimage.outputs.APPIMAGE_NAME }}'
+          destination: '/nextcloud-disktop/linux/${{ steps.build-appimage.outputs.APPIMAGE_NAME }}'
 
 
