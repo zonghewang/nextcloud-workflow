@@ -48,7 +48,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
-          aws s3 sync ${{ env.BASE_WORKSPACE }}/ s3://${{ secrets.R2_BUCKET_NAME }}/nextcloud-disktop/windows/ --endpoint-url ${{ secrets.R2_ENDPOINT_URL }} --checksum-algorithm CRC32 --force
+          aws s3 cp ${{ env.BASE_WORKSPACE }}/${{ steps.build-appimage.outputs.APPIMAGE_NAME }} s3://${{ secrets.R2_BUCKET_NAME }}/nextcloud-disktop/linux --endpoint-url ${{ secrets.R2_ENDPOINT_URL }} --checksum-algorithm CRC32 --force
 
       - name: Upload AppImage artifact
         id: upload-appimage
