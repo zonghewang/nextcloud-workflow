@@ -28,11 +28,6 @@ jobs:
           token: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
           path: nextcloud-desktop
 
-      - name: Install AWS CLI
-        run: |
-          curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-          unzip awscli-bundle.zip
-          ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 
       - name: Configure, compile and package
         id: build-appimage
@@ -51,11 +46,14 @@ jobs:
           overwrite: true
           compression-level: 0 # squashfs is already compressed
 
-      - name: Upload to R2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-        run: |
-            aws s3 cp ${{ env.BASE_WORKSPACE }}/${{ steps.build-appimage.outputs.APPIMAGE_NAME }} s3://${{ secrets.R2_BUCKET_NAME }}/nextcloud-disktop/linux/ --endpoint-url=${{ secrets.R2_ENDPOINT_URL }} --force
+      - name: Upload R2 use S3
+        uses: shallwefootball/s3-upload-action@master
+        with:
+          endpoint: ${{ secrets.R2_ENDPOINT_URL }}
+          aws_key_id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          aws_bucket: ${{ secrets.R2_BUCKET_NAME }}
+          source_dir: '${{ env.BASE_WORKSPACE }}/${{ steps.build-appimage.outputs.APPIMAGE_NAME }}'
+          destination_dir: '/nextcloud-disktop/linux/'
 
 
