@@ -28,12 +28,12 @@ jobs:
           repository: zonghewang/nextcloud-desktop
           token: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
           path: nextcloud-desktop
-          
+
       - name: Install AWS CLI
         run: |
           curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
           unzip awscli-bundle.zip
-          sudo ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+          ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 
       - name: Configure, compile and package
         id: build-appimage
