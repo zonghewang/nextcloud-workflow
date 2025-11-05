@@ -122,6 +122,9 @@ jobs:
           cd ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/msi
           # $Env:WIX="C:\Program Files\WiX Toolset v6.0\bin\"
           & ./make-msi.bat ../bin
+          mkdir ${{ env.BASE_WORKSPACE }}/output
+          Copy-Item -Path "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/msi/*.msi" -Destination "${{ env.BASE_WORKSPACE }}/output/" -Recurse
+
 
  
       # - name: tar msi build script
@@ -136,6 +139,18 @@ jobs:
           name: msi-file
           path: |
             ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/msi/*.msi
+
+      - name: Upload artifact to R2
+        uses: ryand56/r2-upload-action@latest
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET_NAME }}
+          source-dir: '${{ env.BASE_WORKSPACE }}/output/'
+          destination-dir: 'nextcloud-disktop/windows/'
+          keep-file-fresh: true
+
       - name: Upload 7z
         uses: actions/upload-artifact@v4.6.2
         with:
