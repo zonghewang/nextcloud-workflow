@@ -16,6 +16,7 @@ jobs:
     container: ghcr.io/nextcloud/continuous-integration-client-appimage-qt6:client-appimage-el8-6.8.3-1
     env:
       BASE_WORKSPACE: ${{ github.workspace }}/nextcloud-desktop
+      BASE_DEPLOY_DIR: ${{ github.workspace }}/nextcloud-desktop/deploy
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -36,6 +37,8 @@ jobs:
         run: |
             cd nextcloud-desktop
             BUILDNR=${GITHUB_RUN_ID} BUILD_UPDATER=ON DESKTOP_CLIENT_ROOT=`pwd` EXECUTABLE_NAME=nextcloud QT_BASE_DIR=/opt/qt OPENSSL_ROOT_DIR=/usr/local/lib64  /bin/bash -c "./admin/linux/build-appimage.sh"
+            mkdir -p ${{ env.BASE_DEPLOY_DIR }}/
+            cp -v *.AppImage ${{ env.BASE_DEPLOY_DIR }}/
       
       - name: Upload AppImage artifact
         id: upload-appimage
@@ -47,13 +50,14 @@ jobs:
           compression-level: 0 # squashfs is already compressed
 
       - name: Upload artifact to R2
-        uses: randomairborne/r2-release@main
+        uses: ryand56/r2-upload-action@latest
         with:
-          endpoint: ${{ secrets.R2_ENDPOINT_URL }}
-          accesskeyid: ${{ secrets.R2_ACCESS_KEY_ID }}
-          secretaccesskey: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          bucket: ${{ secrets.R2_BUCKET_NAME }}
-          file: '${{ env.BASE_WORKSPACE }}/${{ steps.build-appimage.outputs.APPIMAGE_NAME }}'
-          destination: '/nextcloud-disktop/linux/${{ steps.build-appimage.outputs.APPIMAGE_NAME }}'
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET_NAME }}
+          source-dir: '${{ env.BASE_DEPLOY_DIR }}/'
+          destination-dir: '/nextcloud-disktop/linux/'
+          keep-file-fresh: true
 
 
