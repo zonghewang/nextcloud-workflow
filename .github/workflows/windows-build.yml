@@ -10,6 +10,14 @@ on:
     secrets:
       NEXTCLOUD_BRANCH_ACCESS_TOKEN:
         required: true
+      R2_ACCOUNT_ID:
+        required: true
+      R2_ACCESS_KEY_ID:
+        required: true
+      R2_SECRET_ACCESS_KEY:
+        required: true
+      R2_BUCKET_NAME:
+        required: true
 
 jobs:
   build:
@@ -120,5 +128,9 @@ jobs:
     uses: ./.github/workflows/windows-package.yml
     secrets:
       NEXTCLOUD_BRANCH_ACCESS_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
 
           

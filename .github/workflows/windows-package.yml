@@ -10,6 +10,14 @@ on:
     secrets:
       NEXTCLOUD_BRANCH_ACCESS_TOKEN:
         required: true
+      R2_ACCOUNT_ID:
+        required: true
+      R2_ACCESS_KEY_ID:
+        required: true
+      R2_SECRET_ACCESS_KEY:
+        required: true
+      R2_BUCKET_NAME:
+        required: true
 
 jobs:
   packkage:
