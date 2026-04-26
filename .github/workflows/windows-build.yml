@@ -95,7 +95,7 @@ jobs:
               if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
           }
           
-          craft --src-dir ${{ env.BASE_WORKSPACE }} nextcloud-client
+          craft --srcDir ${{ env.BASE_WORKSPACE }} nextcloud-client
 
       - name: Save cached Craft directories
         if: steps.windows-cache-craft-restore.outputs.cache-hit == 'true'
