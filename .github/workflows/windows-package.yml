@@ -59,23 +59,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Craft Master with Nextcloud Client Deps
-        if: steps.build-windows-cache-craft-restore.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          & cmd /C "git clone -q --depth=1 https://github.com/KDE/craftmaster.git ${{ env.CRAFT_MASTER_LOCATION }} 2>&1"
-          
-          function craft() {
-              python "${{ env.CRAFT_MASTER_LOCATION }}/CraftMaster.py" --config "${{ env.CRAFT_MASTER_CONFIG }}" --target ${{ env.CRAFT_TARGET }} -c $args
-              if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
-          }
-
-          craft --add-blueprint-repository "https://github.com/nextcloud/craft-blueprints-kde.git|next|"
-          craft --add-blueprint-repository "https://oauth2:${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}@github.com/zonghewang/nextcloud-desktop-client-blueprints.git|master|"
-          craft craft
-          craft --install-deps nextcloud-client
-
       - name: Install choco
+        if: steps.build-windows-cache-craft-restore.outputs.cache-hit == 'true'
         shell: pwsh
         run: |
           choco source add -n=chocoOfflineControl -s="file:///${{ env.CHOCO_LOCATION }}/"  --priority=5
@@ -83,18 +68,8 @@ jobs:
           choco source add -n=chocoOfflineControl -s="file:///${{ env.CHOCO_LOCATION }}/" --priority=5
           choco install -f inkscape png2imagemagickico --cache-location="${{ env.CHOCO_LOCATION }}/" 
 
-      - name: Compile
-        if: steps.build-windows-cache-craft-restore.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          function craft() {
-              python "${{ env.CRAFT_MASTER_LOCATION }}/CraftMaster.py" --config "${{ env.CRAFT_MASTER_CONFIG }}" --target ${{ env.CRAFT_TARGET }} -c $args
-              if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
-          }
-          
-          craft --src-dir ${{ env.BASE_WORKSPACE }} nextcloud-client
-
       - name: Pacage
+        if: steps.build-windows-cache-craft-restore.outputs.cache-hit == 'true'
         shell: pwsh
         run: |
           function craft() {
@@ -117,6 +92,7 @@ jobs:
       # https://github.com/microsoft/msix-packaging.git
 
       - name: build msi
+        if: steps.build-windows-cache-craft-restore.outputs.cache-hit == 'true'
         shell: pwsh
         run: |
           & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\Launch-VsDevShell.ps1" -SkipAutomaticLocation
@@ -140,6 +116,7 @@ jobs:
       #     Compress-Archive -Path "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp" -DestinationPath "${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}${{ env.ARCHIVE_PERFIX }}"
 
       - name: Upload msi
+        if: steps.build-windows-cache-craft-restore.outputs.cache-hit == 'true'
         uses: actions/upload-artifact@v4.6.2
         with:
           compression-level: 9
@@ -148,6 +125,7 @@ jobs:
             ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}/tmp/output/msi/*.msi
 
       - name: Upload artifact to R2
+        if: steps.build-windows-cache-craft-restore.outputs.cache-hit == 'true'
         uses: ryand56/r2-upload-action@latest
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
@@ -159,6 +137,7 @@ jobs:
           keep-file-fresh: true
 
       - name: Upload 7z
+        if: steps.build-windows-cache-craft-restore.outputs.cache-hit == 'true'
         uses: actions/upload-artifact@v4.6.2
         with:
           name: source-7z
