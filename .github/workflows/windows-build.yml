@@ -67,7 +67,7 @@ jobs:
 
       - name: Discover cached Craft directories
         id: windows-cache-craft-restore
-        uses: actions/cache/restore@v4.3.0 # v4.3.0
+        uses: actions/cache/restore@v5 # v5
         with:
           path: |
             ${{ env.CHOCO_LOCATION }}
@@ -100,7 +100,7 @@ jobs:
       - name: Save cached Craft directories
         if: steps.windows-cache-craft-restore.outputs.cache-hit == 'true'
         id: build-windows-cache-craft-save
-        uses: actions/cache/save@v4.3.0
+        uses: actions/cache/save@v5
         with:
           path: |
             ${{ env.CHOCO_LOCATION }}
