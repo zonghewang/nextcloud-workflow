@@ -97,7 +97,6 @@ jobs:
 
 
       - name: Install choco
-        # if: steps.build-windows-cache-craft-restore.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           choco source add -n=chocoOfflineControl -s="file:///${{ env.CHOCO_LOCATION }}/" --priority=5

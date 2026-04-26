@@ -76,13 +76,12 @@ jobs:
           craft --install-deps nextcloud-client
 
       - name: Install choco
-        # if: steps.build-windows-cache-craft-restore.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           choco source add -n=chocoOfflineControl -s="file:///${{ env.CHOCO_LOCATION }}/"  --priority=5
           tree /a /f  "${{ env.CHOCO_LOCATION }}"
-          choco install -f inkscape --cache-location="${{ env.CHOCO_LOCATION }}" 
-          # choco install -f inkscape png2imagemagickico --cache-location="${{ env.CHOCO_LOCATION }}" 
+          choco source add -n=chocoOfflineControl -s="file:///${{ env.CHOCO_LOCATION }}/" --priority=5
+          choco install -f inkscape png2imagemagickico --cache-location="${{ env.CHOCO_LOCATION }}/" 
 
       - name: Compile
         if: steps.build-windows-cache-craft-restore.outputs.cache-hit != 'true'
