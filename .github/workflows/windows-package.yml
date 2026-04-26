@@ -77,7 +77,7 @@ jobs:
               if($LASTEXITCODE -ne 0) {exit $LASTEXITCODE}
           }
           
-          craft --src-dir ${{ env.BASE_WORKSPACE }} --package nextcloud-client
+          craft --options nextcloud-client.srcDir=${{ env.BASE_WORKSPACE }} --package nextcloud-client
 
       # - uses: shaowenchen/debugger-action@v2
       #   name: debugger
