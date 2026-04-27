@@ -5,9 +5,13 @@ on:
   push:
     paths:
       - '.github/workflows/linux-appimage.yml'
-  workflow_dispatch:
   workflow_call:
-
+  workflow_dispatch:
+    inputs: 
+      version_suffix: 
+        description: 'Version suffix for the AppImage'        
+        required: true        
+        default: '33.0.0.0'
 
 jobs:
   build:
@@ -36,7 +40,7 @@ jobs:
           PR_ID: ${{ github.event.number }}
         run: |
             cd nextcloud-desktop
-            BUILDNR=${GITHUB_RUN_ID} BUILD_UPDATER=ON DESKTOP_CLIENT_ROOT=`pwd` EXECUTABLE_NAME=nextcloud QT_BASE_DIR=/root/linux-gcc-x86_64 /bin/bash -c "./admin/linux/build-appimage.sh"
+            BUILDNR=${GITHUB_RUN_ID} VERSION_SUFFIX=${inputs.version_suffix} DRONE_COMMIT="" BUILD_UPDATER=ON DESKTOP_CLIENT_ROOT=`pwd` EXECUTABLE_NAME=nextcloud QT_BASE_DIR=/root/linux-gcc-x86_64 /bin/bash -c "./admin/linux/build-appimage.sh"
             mkdir -p deploy/
             cp -v *.AppImage deploy/
       
