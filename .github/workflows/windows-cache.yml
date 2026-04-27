@@ -94,6 +94,7 @@ jobs:
           }
           
           craft --add-blueprint-repository "https://github.com/nextcloud/craft-blueprints-kde.git|master|"
+          # craft --add-blueprint-repository "https://github.com/nextcloud/desktop-client-blueprints.git|master|"
           craft --add-blueprint-repository "https://oauth2:${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}@github.com/zonghewang/nextcloud-desktop-client-blueprints.git|master|"
           craft craft
           craft --install-deps nextcloud-client
