@@ -7,6 +7,12 @@ on:
       - '.github/workflows/windows-package.yml'
   workflow_dispatch:
   workflow_call:
+    inputs: 
+      rebuild_cache: 
+        description: 'Whether to rebuild the cache'        
+        required: true        
+        default: false
+        type: boolean
     secrets:
       NEXTCLOUD_BRANCH_ACCESS_TOKEN:
         required: true

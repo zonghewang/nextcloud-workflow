@@ -1,11 +1,18 @@
 # SPDX-FileCopyrightText: 2022 Nextcloud GmbH and Nextcloud contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
-name: Windows Cache
+name: Windows Environment
 on:
   push:
     paths:
-      - '.github/workflows/windows-cache.yml'
+      - '.github/workflows/windows-env.yml'
   workflow_dispatch:
+    inputs: 
+      rebuild_cache: 
+        description: 'Whether to rebuild the cache'        
+        required: true        
+        default: false
+        type: boolean
+
 jobs:
   cache:
     name: Windows Cache
@@ -45,7 +52,40 @@ jobs:
       #     frp_server_port: ${{ secrets.FRP_SERVER_PORT }}
       #     frp_token: ${{ secrets.FRP_TOKEN }}
       #     ssh_port: ${{ secrets.SSH_PORT }}
+
+      - name: Check Cache
+        id: windows-cache-check
+        env:
+          GH_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
+          ENV_CACHE_KEY: ${{ runner.os }}-env-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+          BUILD_CACHE_KEY: ${{ runner.os }}-build-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+        run: |
+          function check_caches() {
+            echo "init"
+            $cacheKeysForPR=$(gh cache list --key ${{ env.ENV_CACHE_KEY }} --json key --jq '.[].key')
+            echo $cacheKeysForPR
+            foreach ($cacheKey in $cacheKeysForPR) {
+                if ($cacheKey -ceq "${{ env.ENV_CACHE_KEY }}")  {
+                  echo "hint env cache $cacheKey"
+                  echo "env-cache-hit=true" >> "$GITHUB_OUTPUT"
+                }
+             }
+
+            $cacheKeysForPR=$(gh cache list --key ${{ env.BUILD_CACHE_KEY }} --json key --jq '.[].key')
+            echo $cacheKeysForPR
+            foreach ($cacheKey in $cacheKeysForPR) {
+                if ($cacheKey -ceq "${{ env.BUILD_CACHE_KEY }}")  {
+                  echo "hint build cache $cacheKey"
+                  echo "build-cache-hit=true" >> "$GITHUB_OUTPUT"
+                }
+             }
+            echo "Done"
+          }
+          check_caches
+
       - name: Cleanup
+        id: windows-cache-cleanup
+        if: inputs.rebuild_cache == true
         env:
           GH_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
           CACHE_KEY: ${{ runner.os }}-cache-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
@@ -68,6 +108,7 @@ jobs:
 
 
       - name: download choco package
+        if: inputs.rebuild_cache == true || steps.windows-cache-check.outputs.env-cache-hit != 'true'
         shell: pwsh
         run: |
           mkdir ${{ env.CHOCO_LOCATION }}
@@ -84,6 +125,7 @@ jobs:
       #     choco install inkscape --cache-location="${{ env.CHOCO_LOCATION }}/"       
 
       - name: Install Craft Master with Nextcloud Client Deps
+        if: inputs.rebuild_cache == true || steps.windows-cache-check.outputs.env-cache-hit != 'true'
         shell: pwsh
         run: |
           & cmd /C "git clone -q --depth=1 https://github.com/KDE/craftmaster.git ${{ env.CRAFT_MASTER_LOCATION }} 2>&1"
@@ -109,6 +151,7 @@ jobs:
       - name: Save cached Craft directories
         id: build-windows-cache-craft-save
         uses: actions/cache/save@v5
+        if: inputs.rebuild_cache == true || steps.windows-cache-check.outputs.env-cache-hit != 'true'
         with:
           path: |
             ${{ env.CHOCO_LOCATION }}
@@ -119,6 +162,8 @@ jobs:
   call-build-workflow:
     needs: cache
     uses: ./.github/workflows/windows-build.yml
+    with:
+      rebuild_cache: ${{ inputs.rebuild_cache }}
     secrets:
       NEXTCLOUD_BRANCH_ACCESS_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
