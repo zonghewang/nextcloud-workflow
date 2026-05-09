@@ -2,10 +2,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 name: Windows Package
 on:
-  push:
-    paths:
-      - '.github/workflows/windows-package.yml'
-  workflow_dispatch:
   workflow_call:
     inputs: 
       rebuild_cache: 
