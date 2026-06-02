@@ -58,6 +58,7 @@ jobs:
             echo "init"
             $cacheKeysForPR=$(gh cache list --key ${{ env.ENV_CACHE_KEY }} --json key --jq '.[].key')
             echo $cacheKeysForPR
+            echo "env-cache-hit=false" >> "$GITHUB_OUTPUT"
             foreach ($cacheKey in $cacheKeysForPR) {
                 if ($cacheKey -ceq "${{ env.ENV_CACHE_KEY }}")  {
                   echo "hint env cache $cacheKey"
@@ -67,6 +68,7 @@ jobs:
 
             $cacheKeysForPR=$(gh cache list --key ${{ env.BUILD_CACHE_KEY }} --json key --jq '.[].key')
             echo $cacheKeysForPR
+            echo "build-cache-hit=false" >> "$GITHUB_OUTPUT"
             foreach ($cacheKey in $cacheKeysForPR) {
                 if ($cacheKey -ceq "${{ env.BUILD_CACHE_KEY }}")  {
                   echo "hint build cache $cacheKey"
