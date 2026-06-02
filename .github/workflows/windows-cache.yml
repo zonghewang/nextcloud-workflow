@@ -57,7 +57,7 @@ jobs:
         id: windows-cache-check
         env:
           GH_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
-          ENV_CACHE_KEY: ${{ runner.os }}-env-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+          ENV_CACHE_KEY: ${{ runner.os }}-cache-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
           BUILD_CACHE_KEY: ${{ runner.os }}-build-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
         run: |
           function check_caches() {
