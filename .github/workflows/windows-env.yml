@@ -30,8 +30,8 @@ jobs:
       ARCHIVE_PERFIX: .zip
 
     outputs:
-      output1: ${{ steps.windows-cache-check.outputs.env-cache-hit }}
-      output2: ${{ steps.windows-cache-check.outputs.build-cache-hit }}
+      output1: ${{ steps.windows-env-check.outputs.env-env-hit }}
+      output2: ${{ steps.windows-env-check.outputs.build-env-hit }}
     steps:
 
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -58,31 +58,31 @@ jobs:
       #     ssh_port: ${{ secrets.SSH_PORT }}
 
       - name: Check Cache
-        id: windows-cache-check
+        id: windows-env-check
         env:
           GH_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
-          ENV_CACHE_KEY: ${{ runner.os }}-cache-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+          ENV_CACHE_KEY: ${{ runner.os }}-env-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
           BUILD_CACHE_KEY: ${{ runner.os }}-build-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
         run: |
           function check_caches() {
             echo "init"
             $cacheKeysForPR=$(gh cache list --key ${{ env.ENV_CACHE_KEY }} --json key --jq '.[].key')
             echo $cacheKeysForPR
-            echo "env-cache-hit=false" >> "$GITHUB_OUTPUT"
+            echo "env-env-hit=false" >> "$GITHUB_OUTPUT"
             foreach ($cacheKey in $cacheKeysForPR) {
                 if ($cacheKey -ceq "${{ env.ENV_CACHE_KEY }}")  {
                   echo "hint env cache $cacheKey"
-                  echo "env-cache-hit=true" >> "$GITHUB_OUTPUT"
+                  echo "env-env-hit=true" >> "$GITHUB_OUTPUT"
                 }
              }
 
             $cacheKeysForPR=$(gh cache list --key ${{ env.BUILD_CACHE_KEY }} --json key --jq '.[].key')
             echo $cacheKeysForPR
-            echo "build-cache-hit=false" >> "$GITHUB_OUTPUT"
+            echo "build-env-hit=false" >> "$GITHUB_OUTPUT"
             foreach ($cacheKey in $cacheKeysForPR) {
                 if ($cacheKey -ceq "${{ env.BUILD_CACHE_KEY }}")  {
                   echo "hint build cache $cacheKey"
-                  echo "build-cache-hit=true" >> "$GITHUB_OUTPUT"
+                  echo "build-env-hit=true" >> "$GITHUB_OUTPUT"
                 }
              }
             echo "Done"
@@ -90,11 +90,11 @@ jobs:
           check_caches
 
       - name: Cleanup
-        id: windows-cache-cleanup
+        id: windows-env-cleanup
         if: inputs.rebuild_cache == true
         env:
           GH_TOKEN: ${{ secrets.NEXTCLOUD_BRANCH_ACCESS_TOKEN }}
-          CACHE_KEY: ${{ runner.os }}-cache-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+          CACHE_KEY: ${{ runner.os }}-env-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
         run: |
           function clearn_caches() {
             echo "init"
@@ -114,7 +114,7 @@ jobs:
 
 
       - name: download choco package
-        if: inputs.rebuild_cache == true || steps.windows-cache-check.outputs.env-cache-hit != true
+        if: inputs.rebuild_cache == true || steps.windows-env-check.outputs.env-env-hit != true
         shell: pwsh
         run: |
           mkdir ${{ env.CHOCO_LOCATION }}
@@ -128,10 +128,10 @@ jobs:
       #   shell: pwsh
       #   run: |
       #     choco config set --name="chocoOfflineControl" --value="${{ env.CHOCO_LOCATION }}/"
-      #     choco install inkscape --cache-location="${{ env.CHOCO_LOCATION }}/"       
+      #     choco install inkscape --env-location="${{ env.CHOCO_LOCATION }}/"       
 
       - name: Install Craft Master with Nextcloud Client Deps
-        if: inputs.rebuild_cache == true || steps.windows-cache-check.outputs.env-cache-hit != true
+        if: inputs.rebuild_cache == true || steps.windows-env-check.outputs.env-env-hit != true
         shell: pwsh
         run: |
           & cmd /C "git clone -q --depth=1 https://github.com/KDE/craftmaster.git ${{ env.CRAFT_MASTER_LOCATION }} 2>&1"
@@ -155,15 +155,15 @@ jobs:
 
 
       - name: Save cached Craft directories
-        id: build-windows-cache-craft-save
+        id: build-windows-env-craft-save
         uses: actions/cache/save@v5
-        if: inputs.rebuild_cache == true || steps.windows-cache-check.outputs.env-cache-hit != true
+        if: inputs.rebuild_cache == true || steps.windows-env-check.outputs.env-env-hit != true
         with:
           path: |
             ${{ env.CHOCO_LOCATION }}
             ${{ env.CRAFT_MASTER_LOCATION }}
             ${{ env.BASE_WORKSPACE }}/${{ env.CRAFT_TARGET }}
-          key: ${{ runner.os }}-cache-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
+          key: ${{ runner.os }}-env-${{ hashFiles(env.CRAFT_MASTER_CONFIG) }}
 
   call-build-workflow:
     needs: cache
