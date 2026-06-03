@@ -15,7 +15,8 @@ on:
 
 jobs:
   cache:
-    name: Windows Cache
+    name: Windows Environment
+
     runs-on: windows-2022
     permissions: 
       contents: read
